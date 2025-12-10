@@ -38,5 +38,6 @@ uvicorn main:app --reload
 
 La aplicación estará disponible en [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
+## Documentación
 Puedes consultar la documentación interactiva de la API (Swagger UI) en:
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)

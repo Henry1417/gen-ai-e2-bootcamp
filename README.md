@@ -16,3 +16,6 @@ Crear una aplicación que integre un **LLM local** para sugerir exclusivamente s
 ### Proyecto
 El código fuente y la documentación detallada se encuentran en la siguiente carpeta:
 - [📂 turimo_app_antigravity](./turimo_app_antigravity)
+
+#### Evidencias
+- [📂 evidencias](./turimo_app_antigravity/evidencias.md)
