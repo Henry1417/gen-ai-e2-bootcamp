@@ -1,5 +1,8 @@
 # Tourist Application (Antigravity)
 
+**La aplicación se generó utilizando el IDE Antigravity**
+> Se utilizo el modelo Gemini 3 Pro
+
 Esta aplicación sugiere sitios turísticos entre dos puntos utilizando un LLM local.
 
 ## Prerrequisitos
