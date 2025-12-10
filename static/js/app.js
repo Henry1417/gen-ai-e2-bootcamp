@@ -20,6 +20,26 @@ const startInput = document.getElementById('start-input');
 const endInput = document.getElementById('end-input');
 const discoverBtn = document.getElementById('discover-btn');
 const resultsContainer = document.getElementById('results-container');
+const loadMoreBtn = document.getElementById('load-more-btn');
+
+// Helper: Reverse Geocoding
+async function getPlaceName(lat, lng) {
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`;
+        const response = await fetch(url, { headers: { 'User-Agent': 'TurimoApp/1.0' } });
+        const data = await response.json();
+        // Return City/Town + Country, or just display_name shortened
+        if (data.address) {
+            const city = data.address.city || data.address.town || data.address.village || data.address.county;
+            const country = data.address.country;
+            if (city && country) return `${city}, ${country}`;
+        }
+        return data.display_name ? data.display_name.split(',').slice(0, 2).join(',') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    } catch (e) {
+        console.error("Geocoding error", e);
+        return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+}
 
 // Icons
 const createIcon = (color) => {
@@ -41,18 +61,24 @@ const resultIcon = L.divIcon({
 });
 
 // Map Click Handler
-map.on('click', (e) => {
+map.on('click', async (e) => {
     const { lat, lng } = e.latlng;
 
     if (!startPoint) {
         startPoint = { lat, lng };
-        startMarker = L.marker([lat, lng], { icon: startIcon }).addTo(map).bindPopup("Start Point").openPopup();
-        startInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        const name = await getPlaceName(lat, lng);
+        startPoint.name = name;
+
+        startMarker = L.marker([lat, lng], { icon: startIcon }).addTo(map).bindPopup(name).openPopup();
+        startInput.value = name;
         startInput.parentElement.classList.add('filled');
     } else if (!endPoint) {
         endPoint = { lat, lng };
-        endMarker = L.marker([lat, lng], { icon: endIcon }).addTo(map).bindPopup("Destination").openPopup();
-        endInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        const name = await getPlaceName(lat, lng);
+        endPoint.name = name;
+
+        endMarker = L.marker([lat, lng], { icon: endIcon }).addTo(map).bindPopup(name).openPopup();
+        endInput.value = name;
 
         // Draw line
         L.polyline([startPoint, endPoint], { color: 'white', dashArray: '10, 10', weight: 2, opacity: 0.5 }).addTo(map);
@@ -66,8 +92,11 @@ map.on('click', (e) => {
         resetMap();
         // Set new start
         startPoint = { lat, lng };
-        startMarker = L.marker([lat, lng], { icon: startIcon }).addTo(map);
-        startInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        const name = await getPlaceName(lat, lng);
+        startPoint.name = name;
+
+        startMarker = L.marker([lat, lng], { icon: startIcon }).addTo(map).bindPopup(name).openPopup();
+        startInput.value = name;
     }
 });
 
@@ -92,31 +121,41 @@ function resetMap() {
     });
 
     resultsContainer.innerHTML = '<div class="empty-state"><p>Select two points on the map to begin your adventure.</p></div>';
+    loadMoreBtn.style.display = 'none';
 }
 
-// API Call
+// API Call Helper
+async function fetchSuggestions(excludeList = []) {
+    const response = await fetch('/api/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            start: startPoint,
+            end: endPoint,
+            mode: 'ollama',
+            exclude: excludeList
+        })
+    });
+    return await response.json();
+}
+
+// Discover Button Logic
 discoverBtn.addEventListener('click', async () => {
     if (!startPoint || !endPoint) return;
 
     discoverBtn.disabled = true;
     discoverBtn.innerHTML = '<span class="btn-text">Exploring...</span>';
-
-    // Simulate loading/API delay for effect
     resultsContainer.innerHTML = '<div class="empty-state"><p>Consulting the AI Guide...</p></div>';
+    loadMoreBtn.style.display = 'none';
+
+    // Clear old result markers
+    resultMarkers.forEach(m => map.removeLayer(m));
+    resultMarkers = [];
 
     try {
-        const response = await fetch('/api/suggest', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                start: startPoint,
-                end: endPoint,
-                mode: 'simulation'
-            })
-        });
-
-        const data = await response.json();
-        renderResults(data.attractions);
+        const data = await fetchSuggestions([]);
+        renderResults(data.attractions, true);
+        loadMoreBtn.style.display = 'block';
 
     } catch (error) {
         console.error('Error:', error);
@@ -127,10 +166,37 @@ discoverBtn.addEventListener('click', async () => {
     }
 });
 
-function renderResults(attractions) {
-    resultsContainer.innerHTML = '';
-    resultMarkers.forEach(m => map.removeLayer(m));
-    resultMarkers = [];
+// Load More Button Logic
+loadMoreBtn.addEventListener('click', async () => {
+    // Get currently displayed names to exclude
+    const currentCards = document.querySelectorAll('.card h3');
+    const currentNames = Array.from(currentCards).map(el => el.innerText);
+
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.innerHTML = '<span class="btn-text">Loading...</span>';
+
+    try {
+        const data = await fetchSuggestions(currentNames);
+        renderResults(data.attractions, false);
+    } catch (error) {
+        console.error("Error loading more:", error);
+    } finally {
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.innerHTML = '<span class="btn-text">Load More Results</span>';
+    }
+});
+
+function renderResults(attractions, clear = false) {
+    if (clear) {
+        resultsContainer.innerHTML = '';
+    }
+
+    if (attractions.length === 0) {
+        if (clear) resultsContainer.innerHTML = '<div class="empty-state"><p>No results found.</p></div>';
+        // If loading more and found nothing, hide button
+        loadMoreBtn.style.display = 'none';
+        return;
+    }
 
     attractions.forEach((spot, index) => {
         // Add Marker
@@ -142,7 +208,10 @@ function renderResults(attractions) {
         // Add Card
         const card = document.createElement('div');
         card.className = 'card';
-        card.style.animationDelay = `${index * 0.1}s`;
+        // Simple entry animation
+        card.style.animation = `slideIn 0.3s ease-out forwards ${index * 0.1}s`;
+        card.style.opacity = '0';
+
         card.innerHTML = `
             <div class="card-header">
                 <h3>${spot.name}</h3>

@@ -34,7 +34,8 @@ class Location(BaseModel):
 class SuggestRequest(BaseModel):
     start: Location
     end: Location
-    mode: Optional[str] = "ollama" # Changed default to olllama
+    mode: Optional[str] = "ollama"
+    exclude: List[str] = [] # List of attraction names to exclude
 
 class Attraction(BaseModel):
     name: str
@@ -53,17 +54,22 @@ class OllamaService:
         self.host = host
         self.timeout = 60.0 # Longer timeout for LLM generation
 
-    async def generate_suggestions(self, start: Location, end: Location) -> List[Attraction]:
+    async def generate_suggestions(self, start: Location, end: Location, exclude: List[str] = []) -> List[Attraction]:
         """
         Queries local Ollama instance to find attractions between two coordinates.
         """
         # 1. Construct the Prompt
+        exclude_text = ""
+        if exclude:
+            exclude_text = f"Do NOT include the following attractions in your suggestions: {', '.join(exclude)}."
+
         # We need to be very specific to get JSON back.
         prompt = f"""
         You are an API that outputs ONLY valid JSON.
         I have a traveler going from coordinates ({start.lat}, {start.lng}) to ({end.lat}, {end.lng}).
         
         Suggest 5 interesting tourist attractions, hidden gems, or landmarks that are roughly geographically located between or near these two points.
+        {exclude_text}
         
         For each attraction you MUST ESTIMATE its coordinates (latitude and longitude) based on its real location.
         
@@ -153,7 +159,7 @@ async def suggest_attractions(request: SuggestRequest):
     logger.info(f"Received suggestion request from {request.start} to {request.end}")
     
     try:
-        suggestions = await llm_service.generate_suggestions(request.start, request.end)
+        suggestions = await llm_service.generate_suggestions(request.start, request.end, request.exclude)
         return SuggestResponse(attractions=suggestions)
     except Exception as e:
         logger.error(f"Error generating suggestions: {e}")
