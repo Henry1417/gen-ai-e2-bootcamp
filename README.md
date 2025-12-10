@@ -1,42 +1,18 @@
-# Tourist Application (Antigravity)
+# gen-ai-e2-bootcamp
 
-Esta aplicación sugiere sitios turísticos entre dos puntos utilizando un LLM local.
+## Día 2 - Tarea
 
-## Prerrequisitos
+### Descripción
+Desarrollo de una aplicación web utilizando **FastAPI** para el backend y **HTML + Javascript** para el frontend.
 
-- Python 3.8+
-- [Ollama](https://ollama.com/) instalado y ejecutándose con el modelo `llama3.2` (o el configurado en la app).
+### Objetivo
+Crear una aplicación que integre un **LLM local** para sugerir exclusivamente sitios turísticos entre dos puntos geográficos ingresados o seleccionados por el usuario.
 
-## Instalación
+### Requerimientos
+- Exponer el LLM a través de una API.
+- Sugerir sitios turísticos relevantes en la ruta.
+- Servir la aplicación utilizando `uvicorn`.
 
-1.  Navega a la carpeta del proyecto:
-    ```bash
-    cd turimo_app_antigravity
-    ```
-
-2.  (Opcional) Crea y activa un entorno virtual:
-    ```bash
-    python -m venv venv
-    # En Windows:
-    .\venv\Scripts\activate
-    # En macOS/Linux:
-    source venv/bin/activate
-    ```
-
-3.  Instala las dependencias:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-## Ejecución
-
-Para iniciar la aplicación, ejecuta el siguiente comando desde la carpeta `turimo_app_antigravity`:
-
-```bash
-uvicorn main:app --reload
-```
-
-La aplicación estará disponible en [http://127.0.0.1:8000](http://127.0.0.1:8000).
-
-Puedes consultar la documentación interactiva de la API (Swagger UI) en:
-[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+### Proyecto
+El código fuente y la documentación detallada se encuentran en la siguiente carpeta:
+- [📂 turimo_app_antigravity](./turimo_app_antigravity)
