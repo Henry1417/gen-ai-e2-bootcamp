@@ -298,5 +298,17 @@
     "subject": "Urgent: Charged twice for the subscription",
     "description": "User is reporting: Urgent: Charged twice for the subscription. Category seems to be related to Billing.",
     "category": "Billing"
+  },
+  {
+    "id": 51,
+    "subject": "Urgente Usuario bloqueado o eliminado",
+    "description": "al ingresar al aplicativo me arroja el error \"Usuario bloqueado\"",
+    "category": "Software Bug"
+  },
+  {
+    "id": 52,
+    "subject": "error 500",
+    "description": "al abrir la url en el navegaro veo el mensaje \"internal server error code 500\"",
+    "category": "Configuration"
   }
 ]

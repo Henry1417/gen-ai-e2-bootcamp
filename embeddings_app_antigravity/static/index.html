@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Support Search</title>
+    <title>AI Support Ticket Classifier</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
@@ -21,26 +21,60 @@
     <div class="container">
         <header>
             <h1>Support Ticket AI</h1>
-            <p>Find similar issues using semantic search</p>
+            <p>Classify and find similar tickets using semantic embeddings</p>
         </header>
 
         <main>
-            <div class="search-box">
-                <input type="text" id="searchInput"
-                    placeholder="Describe the issue (e.g., 'Unable to log in to my account')..." autocomplete="off">
-                <button id="searchBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                </button>
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="classify">Classify Ticket</button>
+                <button class="tab-btn" data-tab="search">Search Tickets</button>
             </div>
 
-            <div id="resultsArea" class="results-grid">
-                <!-- Results will be injected here -->
-                <div class="empty-state">
-                    <p>Enter a query to see relevant support tickets.</p>
+            <!-- Classify Tab -->
+            <div id="classifyTab" class="tab-content active">
+                <div class="form-box">
+                    <div class="form-group">
+                        <label for="subjectInput">Subject</label>
+                        <input type="text" id="subjectInput" placeholder="e.g., Cannot login to my account"
+                            autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="descriptionInput">Description</label>
+                        <textarea id="descriptionInput" rows="4"
+                            placeholder="Describe the issue in detail..."></textarea>
+                    </div>
+                    <button id="classifyBtn" class="primary-btn">
+                        <span>Classify Ticket</span>
+                    </button>
+                </div>
+
+                <!-- Classify Results Area -->
+                <div id="classifyResultsArea" class="results-grid">
+                    <div class="empty-state">
+                        <p>Enter ticket information above to classify and find similar tickets.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Tab -->
+            <div id="searchTab" class="tab-content">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search for similar tickets..." autocomplete="off">
+                    <button id="searchBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Search Results Area -->
+                <div id="searchResultsArea" class="results-grid">
+                    <div class="empty-state">
+                        <p>Enter a search query above to find similar tickets.</p>
+                    </div>
                 </div>
             </div>
         </main>
