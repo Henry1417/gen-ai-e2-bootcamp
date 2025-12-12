@@ -1,41 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support Ticket Intelligence</title>
+    <title>AI Support Search</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="background-glass"></div>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
     <div class="container">
         <header>
-            <h1>Support Intelligence</h1>
-            <p>Find similar tickets using semantic search</p>
+            <h1>Support Ticket AI</h1>
+            <p>Find similar issues using semantic search</p>
         </header>
 
         <main>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Describe the issue (e.g., 'User cannot login')..." autocomplete="off">
+            <div class="search-box">
+                <input type="text" id="searchInput"
+                    placeholder="Describe the issue (e.g., 'Unable to log in to my account')..." autocomplete="off">
                 <button id="searchBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    Search
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
                 </button>
             </div>
 
-            <div id="loading" class="hidden">
-                <div class="spinner"></div>
-                <span>Analyzing embeddings...</span>
-            </div>
-
-            <div id="resultsContainer">
-                <!-- Results will appear here -->
+            <div id="resultsArea" class="results-grid">
+                <!-- Results will be injected here -->
+                <div class="empty-state">
+                    <p>Enter a query to see relevant support tickets.</p>
+                </div>
             </div>
         </main>
     </div>
+
     <script src="script.js"></script>
 </body>
+
 </html>
