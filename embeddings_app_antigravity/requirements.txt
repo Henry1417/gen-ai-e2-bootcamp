@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+sentence-transformers
+scikit-learn
+numpy
+torch --index-url https://download.pytorch.org/whl/cpu
