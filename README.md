@@ -37,3 +37,21 @@ Crear un sistema inteligente que:
 ### Proyecto
 El código fuente y la documentación completa se encuentran en:
 - [📂 embeddings_app](./embeddings_app_antigravity/README.md)
+
+---
+
+## Día 4
+### Entrega Final 1: Convirtamonos en vibe coders
+Aplicación generada con **Google AI Studio**
+
+### Requerimientos
+- Encuentra un caso de uso
+- Describe el problema
+- Vamos a https://aistudio.google.com/
+- Ingresamos el problema al buil
+- Y ¡Voilá!
+- HACE PARTE DE LA ENTREGA DEL PROYECTO FINAL
+
+### Proyecto
+las evidencias se encuentran en:
+- [📂 google_aistudio_app](./google_aistudio_app/evidencias.md)
