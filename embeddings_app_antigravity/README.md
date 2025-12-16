@@ -4,6 +4,10 @@
 Esta Aplicación **clasifica/busca automáticamente tickets de soporte** utilizando **embeddings** y **sentence-transformers**.
 Clasifica/Encuentra tickets similares basándose en el significado del texto, no solo en palabras clave.
 
+### 📸 Evidencias
+- [Ver capturas de pantalla y ejemplos de uso](./evidencias.md)
+
+
 ## 🌟 Características Principales
 
 - 🤖 **Clasificación Automática**: Usa embeddings para categorizar tickets en 14 categorías diferentes
