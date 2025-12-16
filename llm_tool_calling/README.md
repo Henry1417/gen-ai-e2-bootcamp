@@ -90,7 +90,7 @@ python main.py
 ## 🔍 Observaciones Técnicas
 
 ### Comportamiento del LLM
-El modelo Gemini 1.5 Flash demostró:
+El modelo Llama 3.2 demostró:
 - Excelente capacidad para identificar cuándo necesita información externa
 - Correcta extracción de parámetros de las preguntas del usuario
 - Buena integración de los resultados de las tools en respuestas naturales
@@ -105,7 +105,7 @@ El modelo Gemini 1.5 Flash demostró:
 ## 🎯 Conclusiones
 
 El proyecto demuestra exitosamente:
-1. Implementación de function calling con Google Gemini
+1. Implementación de function calling con Llama 3.2 (Ollama)
 2. Creación de una tool personalizada para la vertical de Retail
 3. Manejo correcto de casos que requieren y no requieren tools
 4. Integración fluida entre el LLM y funciones Python
