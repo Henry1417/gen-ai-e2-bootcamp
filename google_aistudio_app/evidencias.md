@@ -88,15 +88,14 @@ Aplicación end-to-end funcional que simule el envío bancario-regulatorio con v
 La respuesta de **ChatGPT** se ingreso en **Google AI Studio** y el resultado es:
 
 ### V1
-<video controls width="100%">
-  <source src="./assets/files_app_v1.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+
+**📹 [Ver video de demostración V1](./assets/files_app_v1.mp4)**
+
+> **Nota:** Si el video no se reproduce en tu navegador, descárgalo haciendo clic derecho en el enlace y seleccionando "Guardar enlace como..."
 
 ### V2
 Se interactua con el **Agente** para realizar mejoras en la aplicacion, se agregaron funcionalidades y validaciones.
 
-<video controls width="100%">
-  <source src="./assets/files_app_v2.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+**📹 [Ver video de demostración V2](./assets/files_app_v2.mp4)**
+
+> **Nota:** Si el video no se reproduce en tu navegador, descárgalo haciendo clic derecho en el enlace y seleccionando "Guardar enlace como..."
