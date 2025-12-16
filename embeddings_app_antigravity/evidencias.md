@@ -76,15 +76,18 @@ La interfaz principal muestra dos tabs: **Classify Ticket** y **Search Tickets**
 
 ![Búsqueda Ejemplo 1](./assests/ejemplo_busqueda_1.png)
 
-
----
-
 ### Ejemplo de Búsqueda 2
 
 **Query**: "I need a refund"
 
 ![Búsqueda Ejemplo 2](./assests/ejemplo_busqueda_2.png)
 
+---
+
+## Documentación API (Swagger)
+![Documentation Swagger](./assests/image_swagger.png)
+
+---
 
 ## 🔧 Funcionalidades Demostradas
 
