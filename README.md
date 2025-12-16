@@ -55,3 +55,29 @@ Aplicación generada con **Google AI Studio**
 ### Proyecto
 las evidencias se encuentran en:
 - [📂 google_aistudio_app](./google_aistudio_app/evidencias.md)
+
+---
+
+## Día 5
+### Tarea 5: LLamar a una tool desde un LLM en python
+
+### Requerimientos
+Desde python
+-  Llamar o crear una tool que aplique en tu vertical(no se puede usar la tools de bitcoin, pues ya fue mostrada en el ejemplo)
+    - BFSI
+    - CMI
+    - Retail
+    - Etc.
+- Hazle 3 preguntas, 2 donde tenga que llamr a la tool y otra donde no.
+- Deja la evidencia en el sitio
+- Tarea individual
+
+### Proyecto Ejemplo/Practica
+- [📂 llm_tool_calling](./llm_tool_calling/README.md)
+
+### Proyecto Final Parte 1
+El código fuente y la documentación completa se encuentran en:
+
+---
+
+## Entrega Final 2: 
