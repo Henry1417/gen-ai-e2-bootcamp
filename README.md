@@ -75,7 +75,7 @@ Desde python
 ### Proyecto Ejemplo/Practica
 - [📂 llm_tool_calling_example](./llm_tool_calling/README.md)
 
-### Proyecto Final Parte 1
+### Proyecto
 El código fuente y la documentación completa se encuentran en:
 - [📂 tool_calling_proyect](./google_aistudio_app_tool_calling/README.md)
 ---
