@@ -1,0 +1,5 @@
+{
+  "name": "RegulaBank MX/Tool Calling - Sistema de Reportes Regulatorios",
+  "description": "Simulación de sistema bancario para envío y validación de reportes regulatorios (CNBV/Banxico ficticio) con validaciones de formato, nomenclatura y contenido.",
+  "requestFramePermissions": []
+}
