@@ -379,6 +379,38 @@ REGLAS:
 
 # --- API ENDPOINTS ---
 
+# Existing endpoints...
+
+@app.get("/tools/consultar-reportes")
+def api_tool_consultar_reportes(department: Optional[str] = None, status: Optional[str] = None, date: Optional[str] = None):
+    """
+    Endpoint dedicado para n8n (Tool A). 
+    Devuelve el estado de los reportes en formato JSON puro.
+    """
+    # Reutilizamos la lógica existente, pero convertimos el string JSON a objeto python
+    # para que FastAPI lo devuelva como application/json correcto.
+    result_str = tool_consultar_reportes(department, status, date)
+    return json.loads(result_str)
+
+@app.get("/tools/estructura-reporte")
+def api_tool_estructura_reporte(report_name: str):
+    """
+    Endpoint dedicado para n8n (Tool B).
+    Devuelve la definición de columnas para un reporte específico.
+    """
+    for dept, reports in REPORT_DEFINITIONS.items():
+        for rep in reports:
+            if rep["name"] == report_name:
+                return {
+                    "reportName": report_name,
+                    "department": dept,
+                    "columns": rep["columns"],
+                    "separator": "|" # Metadata útil para el LLM
+                }
+    
+    raise HTTPException(status_code=404, detail=f"Reporte '{report_name}' no encontrado en definiciones.")
+
+
 @app.get("/reports")
 def get_reports():
     return REPORTS_DB
