@@ -1,8 +1,15 @@
-# Google AI Studio App - Tool Calling Demo (Refactored)
+# Google AI Studio App - Tool Calling
 
-Este proyecto ha sido refactorizado para utilizar una arquitectura **Frontend - Backend**, migrando la lógica de herramientas de IA a un backend con Python, utilizando **Groq** y **Llama 3.3**.
+Se toma el proyecto realizado desde **Google AI Studio**.
+[Entrega Final 1](https://github.com/Henry1417/gen-ai-e2-bootcamp/tree/main?tab=readme-ov-file#d%C3%ADa-4)
 
-## 🏗️ Nueva Estructura
+Se modifica para utilizar una arquitectura **Frontend - Backend**, migrando la lógica de herramientas de IA a un backend con Python, utilizando **Groq**.
+
+## 📸 Evidencias
+
+**📹 [Tool Calling](https://drive.google.com/file/d/1XwGQVLL6xKWSlBXM2SzK4wfjdFQDX7zr/view?usp=sharing)**
+
+## 🏗️ Estructura
 
 - **`frontend/`**: Aplicación React (Vite) original.
 - **`backend/`**: Servidor FastAPI con Python.

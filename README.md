@@ -77,7 +77,7 @@ Desde python
 
 ### Proyecto Final Parte 1
 El código fuente y la documentación completa se encuentran en:
-
+- [📂 google_aistudio_app_tool_calling](./google_aistudio_app_tool_calling/README.md)
 ---
 
 ## Entrega Final 2: 
