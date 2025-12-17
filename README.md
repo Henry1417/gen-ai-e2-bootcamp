@@ -73,11 +73,13 @@ Desde python
 - Tarea individual
 
 ### Proyecto Ejemplo/Practica
-- [📂 llm_tool_calling](./llm_tool_calling/README.md)
+- [📂 llm_tool_calling_example](./llm_tool_calling/README.md)
 
 ### Proyecto Final Parte 1
 El código fuente y la documentación completa se encuentran en:
-- [📂 google_aistudio_app_tool_calling](./google_aistudio_app_tool_calling/README.md)
+- [📂 tool_calling_proyect](./google_aistudio_app_tool_calling/README.md)
 ---
 
-## Entrega Final 2: 
+### Entrega Final 2: Flujo n8N
+El código fuente y la documentación completa se encuentran en:
+- [📂 n8n_flujo](./n8n_flujo/evidencias.md)
