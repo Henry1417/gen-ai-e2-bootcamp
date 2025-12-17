@@ -2,11 +2,16 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from groq import Groq
+from dotenv import load_dotenv
 import enum
 import uuid
 import datetime
-import ollama
 import json
+import os
+
+# Load environment variables (GROQ_API_KEY)
+load_dotenv()
 
 app = FastAPI()
 
@@ -116,7 +121,7 @@ def initialize_db():
 initialize_db()
 
 
-# --- VALIDATION LOGIC (Ported from TS) ---
+# --- VALIDATION LOGIC ---
 
 MAX_SIZE_MB = 2
 
@@ -136,7 +141,6 @@ async def validate_file(file: UploadFile, department: Department, report_name: s
     parts = name_without_ext.split('_')
     
     # REPORTE_DEPTO_YYYYMMDD_SEQ
-    # Min parts: ReportName (At least 1 part) + Dept + Date + Seq = 4
     if len(parts) < 4:
          return False, ReportStatus.ERROR_FORMAT, "Nomenclatura incorrecta. Formato: REPORTE_DEPTO_YYYYMMDD_SEQ.txt"
          
@@ -215,7 +219,6 @@ def tool_consultar_reportes(department: str = None, status: str = None, date: st
         
         # Filter by Status
         if status:
-            # Handle "missing" or "faltan" mapping if LLM passes raw text
             target_status = status.upper()
             if target_status in ["FALTA", "FALTAN", "PENDIENTE", "PENDIENTES", "MISSING"]:
                 target_status = "PENDING"
@@ -227,8 +230,8 @@ def tool_consultar_reportes(department: str = None, status: str = None, date: st
                     match = False
             
             # Direct match check (unless special error case handled above)
-            if target_status not in ["ERRORES", "FALLIDOS"]:
-                 if r["status"] != target_status and r["status"] != status: # Check both exact and mapped
+            if target_status not in ["ERROR", "ERRORES", "FALLIDO", "FALLIDOS"]:
+                 if r["status"] != target_status and r["status"] != status: 
                     match = False
         
         # Filter by Date
@@ -257,12 +260,23 @@ def tool_consultar_reportes(department: str = None, status: str = None, date: st
     return json.dumps({"count": len(filtered), "reportes": filtered})
 
 
-# --- LLM CHAT LOGIC ---
+# --- GROQ/LLM CHAT LOGIC ---
 
-MODEL_NAME = "llama3.2"
+MODEL_NAME = "llama-3.3-70b-versatile"
+
+# Initialize Groq Client
+# Ensure GROQ_API_KEY is in .env or environment
+try:
+    client = Groq()
+except Exception as e:
+    print("Warning: Groq client failed to initialize. Check API Key.")
+    client = None
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
+    if not client:
+        return {"text": "Error: Groq client not initialized. Check server logs."}
+
     user_msg = request.message
     print(f"💬 Chat Request: {user_msg}")
     
@@ -270,18 +284,17 @@ async def chat_endpoint(request: ChatRequest):
     
     SYSTEM_PROMPT = f"""
 Eres el Asistente de Cumplimiento de RegulaBank.
-Tu objetivo es ayudar a los usuarios a consultar el estatus de sus reportes regulatorios.
-Tienes acceso a una herramienta llamada `consultar_reportes` que te permite obtener datos reales.
+Ayudas a consultar el estatus de reportes regulatorios.
+Tienes acceso a la herramienta `consultar_reportes` para obtener datos REALES.
 
 REGLAS:
-1. SIEMPRE usa la herramienta si el usuario pregunta por estatus, reportes faltantes, errores o historial.
+1. SIEMPRE usa la herramienta si preguntan por estatus, faltantes, errores o historial.
 2. Si preguntan "¿qué falta?", busca status='PENDING'.
-3. Si preguntan por errores, busca status='ERROR_FORMAT' o 'ERROR_UPLOAD'.
-4. La fecha de hoy es {today_str}. Si no especifican fecha, asume que es hoy ({today_str}).
-5. Si el usuario solo saluda (ej: "hola"), responde amablemente SIN usar herramientas.
+3. La fecha de hoy es {today_str}.
+4. Si el usuario solo saluda, responde amablemente sin usar herramientas.
     """
 
-    # Define tool for Ollama
+    # Define tool for Groq (OpenAI format)
     tools = [{
         'type': 'function',
         'function': {
@@ -313,44 +326,55 @@ REGLAS:
             {'role': 'user', 'content': user_msg}
         ]
         
-        response = ollama.chat(
+        # 1. Initial Call
+        response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages,
-            tools=tools
+            tools=tools,
+            tool_choice="auto"
         )
         
-        msg = response['message']
+        response_message = response.choices[0].message
+        tool_calls = response_message.tool_calls
         
-        if msg.get('tool_calls'):
-            messages.append(msg)
-            for tool in msg['tool_calls']:
-                fn_name = tool['function']['name']
-                args = tool['function']['arguments']
+        if tool_calls:
+            # Append assistant's message with tool calls
+            messages.append(response_message)
+            
+            for tool_call in tool_calls:
+                fn_name = tool_call.function.name
+                args = json.loads(tool_call.function.arguments)
                 
                 print(f"🤖 Tool Call: {fn_name} Args: {args}")
-
+                
                 if fn_name == 'consultar_reportes':
                     dept = args.get('department') or args.get('departamento')
                     stat = args.get('status') or args.get('estatus')
                     date_arg = args.get('date') or args.get('fecha')
                     
-                    result = tool_consultar_reportes(department=dept, status=stat, date=date_arg)
+                    function_response = tool_consultar_reportes(department=dept, status=stat, date=date_arg)
                     
                     messages.append({
-                        'role': 'tool',
-                        'content': result
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": fn_name,
+                        "content": function_response,
                     })
             
-            # Final response
-            final = ollama.chat(model=MODEL_NAME, messages=messages)
-            return {"text": final['message']['content']}
+            # 2. Final Call with Tool Outputs
+            second_response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=messages
+            )
+            return {"text": second_response.choices[0].message.content}
             
         else:
-            return {"text": msg['content']}
+            # No tool called
+            return {"text": response_message.content}
 
     except Exception as e:
         print(f"❌ Error LLM: {e}")
-        return {"text": f"Error al procesar tu solicitud con el LLM: {str(e)}"}
+        return {"text": f"Error al procesar tu solicitud con Groq: {str(e)}"}
 
 
 # --- API ENDPOINTS ---
@@ -372,13 +396,11 @@ async def upload_file(
     is_valid, status, msg = await validate_file(file, department, reportName, expectedDate)
     
     # 2. Update DB
-    # Find the report
     report_idx = next((i for i, r in enumerate(REPORTS_DB) if r["reportName"] == reportName and r["date"] == expectedDate), -1)
     
     timestamp = datetime.datetime.now().isoformat()
     
     if report_idx != -1:
-        # Add to history
         new_entry = {
             "id": str(uuid.uuid4()),
             "timestamp": timestamp,

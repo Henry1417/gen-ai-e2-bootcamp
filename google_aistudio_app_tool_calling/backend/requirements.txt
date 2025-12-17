@@ -1,5 +1,6 @@
 fastapi
 uvicorn
-ollama
+groq
+python-dotenv
 pydantic
 python-multipart
