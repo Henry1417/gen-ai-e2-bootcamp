@@ -25,7 +25,7 @@ class Department(str, enum.Enum):
     REGULATORIO = "Regulatorio"
     CUMPLIMIENTO = "Cumplimiento"
     RIESGOS = "Riesgos"
-    AUDITORIA = "Auditoría Interna"
+    AUDITORIA = "Auditoría"
     OPERACIONES = "Operaciones"
 
 class ReportStatus(str, enum.Enum):
@@ -48,13 +48,11 @@ class ReportEntry(BaseModel):
     department: Department
     status: ReportStatus
     date: str
+    lastUpdated: Optional[str] = None
     history: List[SubmissionHistory] = []
 
 class ChatRequest(BaseModel):
     message: str
-    # En un escenario real, pasaríamos el ID de sesión o contexto, 
-    # aquí simplificamos asumiendo un contexto global o pasando el estado relevante si fuera necesario.
-    # Pero como movemos el estado al backend, el backend ya lo tiene.
 
 # --- CONSTANTS (Mirrored from frontend) ---
 
@@ -67,7 +65,6 @@ DEPARTMENT_ABBREVIATIONS = {
 }
 
 # Simplified definitions for validation logic
-# In a real app these might be in a database
 REPORT_DEFINITIONS = {
     Department.REGULATORIO: [
         {"name": 'R01_Saldos_Diarios', "columns": ['ID_CUENTA', 'TIPO_DIVISA', 'SALDO_MXN', 'ESTATUS_CONTABLE']},
@@ -95,15 +92,7 @@ REPORT_DEFINITIONS = {
 }
 
 # --- IN-MEMORY STATE ---
-# We simulate a database here
 REPORTS_DB: List[Dict] = []  # List of ReportEntry
-
-# initialize with some empty reports (optional, or let frontend create them? 
-# In the original app, the frontend probably initialized them. 
-# Let's add an endpoint to INITIALIZE or GET reports.
-# Logic: When frontend mounts, it asks for reports. If empty, maybe backend generates them?
-# Or frontend sends the initial list? 
-# Better: Backend generates the initial structure based on REPORT_DEFINITIONS.
 
 def initialize_db():
     if REPORTS_DB:
@@ -120,6 +109,7 @@ def initialize_db():
                 "department": dept,
                 "status": ReportStatus.PENDING,
                 "date": today_str,
+                "lastUpdated": None,
                 "history": []
             })
             
@@ -132,8 +122,6 @@ MAX_SIZE_MB = 2
 
 async def validate_file(file: UploadFile, department: Department, report_name: str, expected_date_str: str):
     # 1. Size
-    # UploadFile doesn't have size immediately available without reading or checking headers (content-length)
-    # Reading into memory for demo purpose
     content = await file.read()
     if len(content) > MAX_SIZE_MB * 1024 * 1024:
          return False, ReportStatus.ERROR_UPLOAD, f"El archivo excede {MAX_SIZE_MB}MB."
@@ -206,26 +194,49 @@ async def validate_file(file: UploadFile, department: Department, report_name: s
 
 # --- TOOL IMPLEMENTATION ---
 
-def tool_consultar_reportes(department: str = None, status: str = None):
+def tool_consultar_reportes(department: str = None, status: str = None, date: str = None):
     """
     Busca y filtra el listado de reportes regulatorios actuales.
     """
-    print(f"🔧 [TOOL] Consultar Reportes: Dept={department}, Status={status}")
+    print(f"🔧 [TOOL] Consultar Reportes: Dept={department}, Status={status}, Date={date}")
+    
+    # Normalize inputs
+    if date == "HOY" or date == "today":
+        date = datetime.date.today().strftime("%Y-%m-%d")
     
     filtered = []
     for r in REPORTS_DB:
-        match_dept = True
-        if department:
-            # Case insensitive partial match
-            if department.lower() not in r["department"].value.lower():
-                match_dept = False
+        match = True
         
-        match_status = True
+        # Filter by Dept
+        if department:
+            if department.lower() not in r["department"].value.lower():
+                match = False
+        
+        # Filter by Status
         if status:
-            if r["status"] != status:
-                match_status = False
+            # Handle "missing" or "faltan" mapping if LLM passes raw text
+            target_status = status.upper()
+            if target_status in ["FALTA", "FALTAN", "PENDIENTE", "PENDIENTES", "MISSING"]:
+                target_status = "PENDING"
+            elif target_status in ["COMPLETADO", "COMPLETADOS", "ENVIADO", "ENVIADOS", "OK", "EXITO"]:
+                target_status = "SUCCESS"
+            elif target_status in ["ERROR", "ERRORES", "FALLIDO", "FALLIDOS"]:
+                # Special case: match any error
+                if "ERROR" not in r["status"]:
+                    match = False
+            
+            # Direct match check (unless special error case handled above)
+            if target_status not in ["ERRORES", "FALLIDOS"]:
+                 if r["status"] != target_status and r["status"] != status: # Check both exact and mapped
+                    match = False
+        
+        # Filter by Date
+        if date:
+            if r["date"] != date:
+                match = False
                 
-        if match_dept and match_status:
+        if match:
             # Format error message if exists
             error_msg = "N/A"
             if len(r["history"]) > 0 and "ERROR" in r["status"]:
@@ -236,11 +247,12 @@ def tool_consultar_reportes(department: str = None, status: str = None):
                 "departamento": r["department"],
                 "estatus": r["status"],
                 "fecha": r["date"],
-                "mensaje_error": error_msg
+                "mensaje_error": error_msg,
+                "intentos": len(r["history"])
             })
             
     if not filtered:
-        return json.dumps({"count": 0, "message": "No se encontraron reportes."})
+        return json.dumps({"count": 0, "message": "No se encontraron reportes con los criterios especificados."})
         
     return json.dumps({"count": len(filtered), "reportes": filtered})
 
@@ -254,12 +266,27 @@ async def chat_endpoint(request: ChatRequest):
     user_msg = request.message
     print(f"💬 Chat Request: {user_msg}")
     
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    
+    SYSTEM_PROMPT = f"""
+Eres el Asistente de Cumplimiento de RegulaBank.
+Tu objetivo es ayudar a los usuarios a consultar el estatus de sus reportes regulatorios.
+Tienes acceso a una herramienta llamada `consultar_reportes` que te permite obtener datos reales.
+
+REGLAS:
+1. SIEMPRE usa la herramienta si el usuario pregunta por estatus, reportes faltantes, errores o historial.
+2. Si preguntan "¿qué falta?", busca status='PENDING'.
+3. Si preguntan por errores, busca status='ERROR_FORMAT' o 'ERROR_UPLOAD'.
+4. La fecha de hoy es {today_str}. Si no especifican fecha, asume que es hoy ({today_str}).
+5. Si el usuario solo saluda (ej: "hola"), responde amablemente SIN usar herramientas.
+    """
+
     # Define tool for Ollama
     tools = [{
         'type': 'function',
         'function': {
             'name': 'consultar_reportes',
-            'description': 'Busca y filtra reportes. Útil para saber errores, faltantes o estado por departamento.',
+            'description': 'Consulta la Base de Datos de reportes. Filtra por departamento, estatus o fecha.',
             'parameters': {
                 'type': 'object',
                 'properties': {
@@ -269,7 +296,11 @@ async def chat_endpoint(request: ChatRequest):
                     },
                     'status': {
                         'type': 'string',
-                        'description': 'Estado (PENDING, SUCCESS, ERROR_FORMAT, READY)'
+                        'description': 'Estado buscado: PENDING (Faltan), SUCCESS (Completados), ERROR_FORMAT (Errores), READY (Listos)'
+                    },
+                    'date': {
+                        'type': 'string',
+                        'description': f'Fecha en formato YYYY-MM-DD. Hoy es {today_str}.'
                     }
                 }
             }
@@ -277,7 +308,10 @@ async def chat_endpoint(request: ChatRequest):
     }]
     
     try:
-        messages = [{'role': 'user', 'content': user_msg}]
+        messages = [
+            {'role': 'system', 'content': SYSTEM_PROMPT},
+            {'role': 'user', 'content': user_msg}
+        ]
         
         response = ollama.chat(
             model=MODEL_NAME,
@@ -293,15 +327,14 @@ async def chat_endpoint(request: ChatRequest):
                 fn_name = tool['function']['name']
                 args = tool['function']['arguments']
                 
+                print(f"🤖 Tool Call: {fn_name} Args: {args}")
+
                 if fn_name == 'consultar_reportes':
-                    # Map args names if necessary (Ollama sometimes hallucinates arg names, but usually fine)
-                    # Our tool expects 'department' and 'status' (english), but prompt said 'departamento' (spanish)? 
-                    # The tool definition uses 'department' and 'status'.
-                    # Let's handle variations just in case
                     dept = args.get('department') or args.get('departamento')
                     stat = args.get('status') or args.get('estatus')
+                    date_arg = args.get('date') or args.get('fecha')
                     
-                    result = tool_consultar_reportes(department=dept, status=stat)
+                    result = tool_consultar_reportes(department=dept, status=stat, date=date_arg)
                     
                     messages.append({
                         'role': 'tool',
@@ -355,6 +388,7 @@ async def upload_file(
         }
         REPORTS_DB[report_idx]["history"].append(new_entry)
         REPORTS_DB[report_idx]["status"] = status
+        REPORTS_DB[report_idx]["lastUpdated"] = timestamp
         
         return {
             "isValid": is_valid,
@@ -363,9 +397,6 @@ async def upload_file(
             "report": REPORTS_DB[report_idx]
         }
     else:
-        # Validation passed but report not found in DB? 
-        # Shouldn't happen if we initialized DB correctly or frontend is synced.
-        # But if it happens, maybe create it?
         return {
             "isValid": False,
             "errorType": ReportStatus.ERROR_UPLOAD,
