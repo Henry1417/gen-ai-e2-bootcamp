@@ -1,65 +1,50 @@
-# RegulaBank MX - Sistema de Reportes Regulatorios
+# Google AI Studio App - Tool Calling Demo (Refactored)
 
-**RegulaBank MX** es una simulación de alta fidelidad de una plataforma bancaria diseñada para la gestión, validación y envío de reportes regulatorios a entidades ficticias (como CNBV o Banxico). 
+Este proyecto ha sido refactorizado para utilizar una arquitectura **Frontend - Backend**, migrando la lógica de herramientas de IA a un backend con Python y Llama 3.2.
 
-La aplicación se centra en la integridad de los datos, validando estrictamente la nomenclatura de archivos, la estructura de columnas y la consistencia de fechas antes de permitir un "envío" exitoso.
+## 🏗️ Nueva Estructura
 
-## 🚀 Características Principales
+- **`frontend/`**: Aplicación React (Vite) original.
+- **`backend/`**: Servidor FastAPI con Python.
 
-*   **Validación Estricta de Archivos:**
-    *   Verificación de nomenclatura: `NOMBRE_DEPTO_YYYYMMDD_SEQ.txt`.
-    *   Coherencia de datos: Valida que la fecha en el nombre del archivo coincida con la fecha de reporte seleccionada.
-    *   Integridad de estructura: Valida dinámicamente que el archivo contenga el número exacto de columnas requeridas para cada tipo de reporte.
-    *   Validación cruzada: Impide subir un reporte de "Riesgos" en un slot de "Auditoría".
-*   **Simulación de Backend:** Servicio (`mockBackendService`) que simula latencia de red, validaciones asíncronas y respuestas de error/éxito.
-*   **Generador de Plantillas:** Funcionalidad para descargar archivos `.txt` de prueba con datos aleatorios que cumplen con la estructura válida de cada reporte.
-*   **Historial de Envíos:** Registro detallado de intentos fallidos y exitosos con mensajes de retroalimentación.
-*   **Interfaz Moderna:** Diseño responsivo con soporte completo para **Modo Oscuro**, construido con Tailwind CSS.
+## 🛠️ Requisitos
 
-## 🛠️ Stack Tecnológico
+- Python 3.8+
+- Node.js 16+
+- Ollama corriendo localmente con el modelo `llama3.2`.
 
-*   **Core:** React 19 + TypeScript.
-*   **Estilos:** Tailwind CSS.
-*   **Iconografía:** Lucide React.
-*   **Empaquetado/Ejecución:** Compatible con Vite o entornos de ejecución directa de módulos ES.
+## 🚀 Cómo Ejecutar
 
-## 📋 Reglas de Negocio y Validación
+### 1. Iniciar el Backend (Python)
 
-Para que un archivo sea aceptado por el sistema, debe cumplir las siguientes reglas (definidas en `constants.ts`):
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
+*El servidor iniciará en http://localhost:8000*
 
-1.  **Formato:** Archivo de texto plano (`.txt`) con codificación UTF-8.
-2.  **Nomenclature:** Debe seguir el patrón estricto `REPORTE_DEPTO_YYYYMMDD_SEQ.txt`.
-    *   *Ejemplo:* `R01_Saldos_Diarios_REG_20231027_001.txt`
-3.  **Contenido:** Las columnas deben estar separadas por `|` (pipe).
-    *   Si el reporte espera 4 columnas y una línea tiene 3 o 5, el archivo será rechazado.
-4.  **Fecha:** La fecha incrustada en el nombre del archivo debe coincidir exactamente con la fecha seleccionada en el selector de la interfaz.
+### 2. Iniciar el Frontend (React)
 
-## 📦 Instalación y Ejecución
+En una nueva terminal:
 
-Este proyecto está diseñado como una aplicación React moderna.
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*La aplicación abrirá en http://localhost:5173*
 
-1.  **Instalar dependencias:**
-    ```bash
-    npm install
-    ```
+## 🧠 Lógica de AI y Tools
 
-2.  **Ejecutar entorno de desarrollo:**
-    ```bash
-    npm run dev
-    ```
+La lógica que anteriormente residía en `geminiService.ts` ha sido migrada a `backend/main.py`.
 
-3.  **Construir para producción:**
-    ```bash
-    npm run build
-    ```
+- **Endpoint `/chat`**: Recibe mensajes del usuario y consulta a Ollama.
+- **Tool `consultar_reportes`**: Implementada en Python, consulta el estado de reportes en memoria (`REPORTS_DB`).
+- **Endpoint `/upload`**: Maneja la carga y validación de archivos, actualizando el estado de los reportes en el backend.
 
-## 📂 Estructura del Proyecto
+## 📝 Notas sobre la Simulación
 
-*   `components/`: Componentes de UI (Modales, Filas de reportes, Badges).
-*   `services/`: Lógica de simulación de backend (`mockBackendService.ts`).
-*   `types.ts`: Definiciones de tipos TypeScript e Interfaces.
-*   `constants.ts`: **Archivo crítico**. Contiene la definición de todos los reportes, sus columnas esperadas, reglas de validación y datos de prueba (`REPORT_DEFINITIONS`).
-*   `App.tsx`: Controlador principal y gestión de estado.
-
----
-*Desarrollado como simulación de arquitectura de software para sistemas regulatorios financieros.*
+- La base de datos de reportes es **en memoria** en el backend. Se reinicia si detienes el proceso de Python.
+- Al iniciar, el backend genera reportes "PENDING" para la fecha actual.
+- Puedes usar las plantillas del frontend para generar archivos válidos y probar la carga.

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { ReportEntry, ReportStatus, SubmissionHistory } from '../types';
 import { REPORT_DEFINITIONS } from '../constants';
 import StatusBadge from './StatusBadge';
-import { simulateBackendUpload } from '../services/mockBackendService';
+import { uploadReportFile } from '../services/api';
 import HistoryModal from './HistoryModal';
 import RequirementsModal from './RequirementsModal';
 import { Upload, Send, RefreshCw, History, Shield, Lock } from 'lucide-react';
@@ -46,58 +46,67 @@ const ReportRow: React.FC<ReportRowProps> = ({ report, onUpdate, readOnly = fals
     onUpdate({ ...report, status: ReportStatus.UPLOADING });
 
     // Pass report.date to validate against filename date
-    const result = await simulateBackendUpload(
-      report.currentFile, 
-      report.department, 
-      report.reportName,
-      report.date 
-    );
-    
-    const now = new Date().toISOString();
-    
-    const historyEntry: SubmissionHistory = {
-      id: crypto.randomUUID(),
-      timestamp: now,
-      filename: report.currentFile.name,
-      status: result.isValid ? ReportStatus.SUCCESS : (result.errorType || ReportStatus.ERROR_UPLOAD),
-      message: result.message || 'Procesado correctamente por el regulador.',
-    };
+    try {
+      const result = await uploadReportFile(
+        report.currentFile,
+        report.department,
+        report.reportName,
+        report.date
+      );
 
-    onUpdate({
-      ...report,
-      status: historyEntry.status,
-      lastUpdated: result.isValid ? now : report.lastUpdated,
-      history: [...report.history, historyEntry],
-    });
+      const now = new Date().toISOString();
+
+      // If server returns updated report object use it, otherwise mock local update
+      // Backend returns { isValid, errorType, message, report? }
+
+      const historyEntry: SubmissionHistory = {
+        id: crypto.randomUUID(),
+        timestamp: now,
+        filename: report.currentFile.name,
+        status: result.isValid ? ReportStatus.SUCCESS : (result.errorType || ReportStatus.ERROR_UPLOAD),
+        message: result.message || 'Procesado correctamente.',
+      };
+
+      onUpdate({
+        ...report,
+        status: historyEntry.status,
+        lastUpdated: result.isValid ? now : report.lastUpdated,
+        history: [...report.history, historyEntry],
+      });
+
+    } catch (e) {
+      alert("Error uploading file: " + e);
+      onUpdate({ ...report, status: ReportStatus.ERROR_UPLOAD });
+    }
   };
 
   const isSentOnce = report.history.length > 0;
-  
+
   // Safe date helper
   const isValidDate = (d: string | null) => d && !isNaN(new Date(d).getTime());
 
   return (
     <>
       <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-gray-100 dark:border-slate-700 group">
-        
+
         <td className="px-6 py-4 whitespace-nowrap">
-           <div className="flex flex-col">
-             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{report.reportName}</span>
-             <span className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">{report.department}</span>
-           </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{report.reportName}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">{report.department}</span>
+          </div>
         </td>
 
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-           {isValidDate(report.lastUpdated) ? (
-             <div className="flex flex-col">
-               <span className="font-medium text-gray-700 dark:text-gray-300">
-                 {new Date(report.lastUpdated!).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-               </span>
-               <span className="text-xs">
-                 {new Date(report.lastUpdated!).toLocaleDateString()}
-               </span>
-             </div>
-           ) : <span className="text-gray-300 dark:text-gray-600">-</span>}
+          {isValidDate(report.lastUpdated) ? (
+            <div className="flex flex-col">
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {new Date(report.lastUpdated!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <span className="text-xs">
+                {new Date(report.lastUpdated!).toLocaleDateString()}
+              </span>
+            </div>
+          ) : <span className="text-gray-300 dark:text-gray-600">-</span>}
         </td>
 
         <td className="px-6 py-4 whitespace-nowrap">
@@ -106,9 +115,9 @@ const ReportRow: React.FC<ReportRowProps> = ({ report, onUpdate, readOnly = fals
 
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
           <div className="flex items-center justify-end space-x-2">
-            
+
             {/* Requirements Button */}
-             <button
+            <button
               onClick={() => setIsReqsOpen(true)}
               className="p-2 rounded-full text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
               title="Ver Requisitos"
@@ -118,15 +127,15 @@ const ReportRow: React.FC<ReportRowProps> = ({ report, onUpdate, readOnly = fals
 
             {/* Read Only Lock Indicator or Upload Actions */}
             {readOnly ? (
-               <div className="p-2 text-gray-400" title="Solo lectura (Fecha pasada)">
-                 <Lock className="w-5 h-5" />
-               </div>
+              <div className="p-2 text-gray-400" title="Solo lectura (Fecha pasada)">
+                <Lock className="w-5 h-5" />
+              </div>
             ) : (
               <>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
                   accept=".txt"
                   onChange={handleFileChange}
                 />
@@ -152,10 +161,10 @@ const ReportRow: React.FC<ReportRowProps> = ({ report, onUpdate, readOnly = fals
                     onClick={handleSend}
                     disabled={report.status === ReportStatus.UPLOADING}
                     className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-white shadow-sm transition-all
-                      ${report.status === ReportStatus.UPLOADING 
-                        ? 'bg-gray-400 cursor-wait' 
-                        : isSentOnce 
-                          ? 'bg-indigo-600 hover:bg-indigo-700' 
+                      ${report.status === ReportStatus.UPLOADING
+                        ? 'bg-gray-400 cursor-wait'
+                        : isSentOnce
+                          ? 'bg-indigo-600 hover:bg-indigo-700'
                           : 'bg-emerald-600 hover:bg-emerald-700'}
                     `}
                   >
@@ -184,19 +193,19 @@ const ReportRow: React.FC<ReportRowProps> = ({ report, onUpdate, readOnly = fals
         </td>
       </tr>
 
-      <HistoryModal 
-        isOpen={isHistoryOpen} 
-        onClose={() => setIsHistoryOpen(false)} 
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
         history={report.history}
         reportName={report.reportName}
       />
 
-      <RequirementsModal 
-         isOpen={isReqsOpen}
-         onClose={() => setIsReqsOpen(false)}
-         department={report.department}
-         reportName={report.reportName}
-         requirements={requirements}
+      <RequirementsModal
+        isOpen={isReqsOpen}
+        onClose={() => setIsReqsOpen(false)}
+        department={report.department}
+        reportName={report.reportName}
+        requirements={requirements}
       />
     </>
   );

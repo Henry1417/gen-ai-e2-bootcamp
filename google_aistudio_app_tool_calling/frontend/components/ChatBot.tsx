@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
-import { sendMessageToAI } from '../services/geminiService';
+import { chatWithBot } from '../services/api';
 import { ReportEntry } from '../types';
 
 interface ChatBotProps {
@@ -40,27 +40,34 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentReports }) => {
 
     const userText = input.trim();
     setInput('');
-    
+
     // Add user message
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', text: userText };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     // Call Service
-    const responseText = await sendMessageToAI(userText, currentReports);
-
-    setIsLoading(false);
-    setMessages(prev => [
-      ...prev,
-      { id: crypto.randomUUID(), role: 'assistant', text: responseText }
-    ]);
+    try {
+      const responseText = await chatWithBot(userText);
+      setIsLoading(false);
+      setMessages(prev => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'assistant', text: responseText }
+      ]);
+    } catch (error) {
+      setIsLoading(false);
+      setMessages(prev => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'assistant', text: "Lo siento, hubo un error de conexión." }
+      ]);
+    }
   };
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">
-      
+
       {/* Chat Window */}
-      <div 
+      <div
         className={`
           pointer-events-auto bg-white dark:bg-slate-900 w-80 sm:w-96 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 transform origin-bottom-right mb-4
           ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4 pointer-events-none h-0'}
@@ -75,7 +82,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentReports }) => {
               <p className="text-xs text-indigo-100 opacity-90">Powered by Llama 3 (Groq)</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setIsOpen(false)}
             className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-1 transition-colors"
           >
@@ -86,22 +93,22 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentReports }) => {
         {/* Messages Area */}
         <div className="h-80 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950 space-y-4">
           {messages.map((msg) => (
-            <div 
-              key={msg.id} 
+            <div
+              key={msg.id}
               className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              <div 
+              <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 
                   ${msg.role === 'user' ? 'bg-gray-200 dark:bg-slate-700' : 'bg-indigo-100 dark:bg-indigo-900/50'}
                 `}
               >
                 {msg.role === 'user' ? <User className="w-5 h-5 text-gray-600 dark:text-gray-300" /> : <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
               </div>
-              
-              <div 
+
+              <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm
-                  ${msg.role === 'user' 
-                    ? 'bg-blue-600 text-white rounded-br-none' 
+                  ${msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-none'
                     : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-slate-700 rounded-bl-none'}
                 `}
               >
@@ -109,15 +116,15 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentReports }) => {
               </div>
             </div>
           ))}
-          
+
           {isLoading && (
             <div className="flex gap-3">
               <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0">
                 <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl rounded-bl-none px-4 py-2 flex items-center gap-2">
-                 <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                 <span className="text-xs text-gray-500 dark:text-gray-400">Analizando reportes...</span>
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                <span className="text-xs text-gray-500 dark:text-gray-400">Analizando reportes...</span>
               </div>
             </div>
           )}
@@ -133,7 +140,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentReports }) => {
             placeholder="Escribe tu consulta..."
             className="flex-1 text-sm bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 border-transparent"
           />
-          <button 
+          <button
             type="submit"
             disabled={!input.trim() || isLoading}
             className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 text-white rounded-full transition-colors shadow-md"

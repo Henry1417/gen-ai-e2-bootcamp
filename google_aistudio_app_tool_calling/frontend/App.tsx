@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Department, ReportEntry, ReportStatus } from './types';
-import { REPORT_DEFINITIONS, generateMockHistory } from './constants';
+import { REPORT_DEFINITIONS } from './constants';
+import { fetchReports } from './services/api';
 import ReportRow from './components/ReportRow';
 import TemplatesModal from './components/TemplatesModal';
 import ChatBot from './components/ChatBot';
@@ -33,71 +34,18 @@ const App = () => {
     }
   }, [darkMode]);
 
-  // Load Data Logic
+  // Load Data from Backend
   useEffect(() => {
-    const today = getTodayString();
-    const isPast = selectedDate < today;
-
-    // Check LocalStorage first
-    const saved = localStorage.getItem(STORAGE_KEY);
-    let allReports: ReportEntry[] = [];
-
-    if (saved) {
+    const loadData = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        allReports = parsed.map((r: any) => ({ ...r, currentFile: null }));
-      } catch (e) {
-        console.error("Parse error", e);
+        const data = await fetchReports(selectedDate);
+        setReports(data);
+      } catch (err) {
+        console.error(err);
       }
-    }
-
-    // Filter for selected date
-    let dateReports = allReports.filter(r => r.date === selectedDate);
-
-    // If no reports exist for this date, generate them (Auto-populate ALL reports)
-    if (dateReports.length === 0) {
-      const generated: ReportEntry[] = [];
-      Object.entries(REPORT_DEFINITIONS).forEach(([dept, definitions]) => {
-        definitions.forEach(def => {
-          // If past date, generate mock history
-          const history = isPast ? generateMockHistory(selectedDate, def.name) : [];
-          // Determine status based on history
-          let status = ReportStatus.PENDING;
-          let lastUpdated = null;
-          
-          if (history.length > 0) {
-            const last = history[history.length - 1];
-            status = last.status;
-            lastUpdated = last.timestamp;
-          }
-
-          generated.push({
-            id: crypto.randomUUID(),
-            date: selectedDate,
-            department: dept as Department,
-            reportName: def.name,
-            lastUpdated: lastUpdated,
-            status: status,
-            history: history,
-            currentFile: null
-          });
-        });
-      });
-      dateReports = generated;
-      // Merge new generated ones with existing state (to keep other dates)
-      allReports = [...allReports.filter(r => r.date !== selectedDate), ...generated];
-    }
-
-    setReports(allReports);
+    };
+    loadData();
   }, [selectedDate]);
-
-  // Save to Storage
-  useEffect(() => {
-    if (reports.length > 0) {
-      const toSave = reports.map(({ currentFile, ...rest }) => rest);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-    }
-  }, [reports]);
 
   const handleUpdateReport = (updated: ReportEntry) => {
     setReports(prev => prev.map(r => r.id === updated.id ? updated : r));
@@ -112,7 +60,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 pb-20">
-      
+
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -126,25 +74,25 @@ const App = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-             <div className="hidden md:flex flex-col items-end mr-4">
-               <span className="text-xs text-gray-400 dark:text-slate-500">Ambiente</span>
-               <span className="text-xs font-bold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-500 dark:border-yellow-800">SIMULACIÓN</span>
-             </div>
-             
-             <button 
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-full transition-colors"
-                title="Cambiar tema"
-             >
-               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-             </button>
+            <div className="hidden md:flex flex-col items-end mr-4">
+              <span className="text-xs text-gray-400 dark:text-slate-500">Ambiente</span>
+              <span className="text-xs font-bold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-500 dark:border-yellow-800">SIMULACIÓN</span>
+            </div>
+
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-full transition-colors"
+              title="Cambiar tema"
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Controls Bar */}
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-colors">
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -152,19 +100,19 @@ const App = () => {
               <Calendar className="w-4 h-4 text-gray-500" />
               Fecha de Reporte:
             </label>
-            <input 
+            <input
               id="date-filter"
-              type="date" 
+              type="date"
               max={todayStr}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="block rounded-md border-0 py-1.5 text-gray-900 dark:text-white dark:bg-slate-800 ring-1 ring-inset ring-gray-300 dark:ring-slate-700 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 cursor-pointer"
             />
           </div>
-          
-          <button 
-             onClick={() => setIsTemplatesOpen(true)}
-             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-md bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
+
+          <button
+            onClick={() => setIsTemplatesOpen(true)}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-md bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
           >
             <Download className="w-4 h-4 text-indigo-500" />
             Descargar Plantillas
@@ -174,10 +122,10 @@ const App = () => {
         {/* Read Only Warning */}
         {isReadOnly && (
           <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg flex items-center gap-3">
-             <Layers className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-             <p className="text-sm text-amber-800 dark:text-amber-200">
-               <strong>Modo Histórico:</strong> Estás visualizando registros de una fecha pasada. Las cargas y envíos están deshabilitados.
-             </p>
+            <Layers className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>Modo Histórico:</strong> Estás visualizando registros de una fecha pasada. Las cargas y envíos están deshabilitados.
+            </p>
           </div>
         )}
 
@@ -189,7 +137,7 @@ const App = () => {
               const deptReports = reports.filter(r => r.date === selectedDate && r.department === dept);
               const isAllCompleted = deptReports.length > 0 && deptReports.every(r => r.status === ReportStatus.SUCCESS);
               const hasReports = deptReports.length > 0;
-              
+
               return (
                 <button
                   key={dept}
@@ -202,7 +150,7 @@ const App = () => {
                   `}
                 >
                   {dept}
-                  
+
                   {/* Status Indicator */}
                   {hasReports && (
                     <span className="relative flex h-2 w-2">
@@ -239,9 +187,9 @@ const App = () => {
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
                 {filteredReports.length > 0 ? (
                   filteredReports.map((report) => (
-                    <ReportRow 
-                      key={report.id} 
-                      report={report} 
+                    <ReportRow
+                      key={report.id}
+                      report={report}
                       onUpdate={handleUpdateReport}
                       readOnly={isReadOnly}
                     />
@@ -266,9 +214,9 @@ const App = () => {
       {/* AI Assistant ChatBot */}
       <ChatBot currentReports={currentViewReports} />
 
-      <TemplatesModal 
-        isOpen={isTemplatesOpen} 
-        onClose={() => setIsTemplatesOpen(false)} 
+      <TemplatesModal
+        isOpen={isTemplatesOpen}
+        onClose={() => setIsTemplatesOpen(false)}
         dateStr={selectedDate}
       />
     </div>
